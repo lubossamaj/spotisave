@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SpotiSave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ── Reset & tokens ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #f8f8f8;
+  --surface:   #ffffff;
+  --border:    #e4e4e4;
+  --text:      #1a1a1a;
+  --muted:     #6b7280;
+  --accent:    #2d6a4f;
+  --accent-h:  #235640;
+  --accent-t:  #eaf4ef;
+  --red:       #dc2626;
+  --red-t:     #fef2f2;
+  --blue:      #2563eb;
+  --blue-t:    #eff6ff;
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --radius:    10px;
+  --font:      'Inter', system-ui, sans-serif;
+}
+[data-dark] {
+  --bg:      #111111;
+  --surface: #1c1c1c;
+  --border:  #2e2e2e;
+  --text:    #f0f0f0;
+  --muted:   #888888;
+  --accent-t:#162d22;
+  --red-t:   #2d1515;
+  --blue-t:  #0f1f40;
+  --shadow:  0 1px 3px rgba(0,0,0,.4);
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+  transition: background .2s, color .2s;
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────── */
+.container { max-width: 780px; margin: 0 auto; padding: 0 16px; }
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+  position: sticky; top: 0; z-index: 10;
+  box-shadow: var(--shadow);
+}
+.header-inner { display: flex; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand svg { color: var(--accent); flex-shrink: 0; }
+.brand-name { font-size: 18px; font-weight: 600; letter-spacing: -.3px; }
+
+.theme-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); transition: background .15s, color .15s;
+}
+.theme-btn:hover { background: var(--border); color: var(--text); }
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tab {
+  padding: 8px 14px; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none; background: none; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Inputs ───────────────────────────────────────────────────────────── */
+.field {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font); font-size: 14px;
+  outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.12); }
+textarea.field { resize: vertical; min-height: 90px; }
+.row { display: flex; gap: 8px; align-items: flex-start; }
+.row .field { flex: 1; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+.btn {
+  padding: 9px 16px; border-radius: 7px; font-family: var(--font);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  border: none; transition: background .15s, opacity .15s;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  text-decoration: none;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-h); }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--border); }
+.btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { opacity: .88; }
+.btn:disabled { opacity: .45; cursor: default; }
+
+/* ── Drop zone ────────────────────────────────────────────────────────── */
+.dropzone {
+  border: 2px dashed var(--border); border-radius: 9px;
+  padding: 32px 20px; text-align: center; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.dropzone.over { border-color: var(--accent); background: var(--accent-t); }
+.dropzone svg { color: var(--muted); margin-bottom: 8px; }
+.dropzone p { color: var(--muted); font-size: 13px; }
+.dropzone strong { color: var(--text); }
+#file-input { display: none; }
+
+/* ── Queue ────────────────────────────────────────────────────────────── */
+.queue-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.queue-title { font-size: 15px; font-weight: 600; }
+.queue-empty { text-align: center; padding: 32px 0; color: var(--muted); font-size: 13px; }
+
+.task-item { border: 1px solid var(--border); border-radius: 8px; background: var(--bg); margin-bottom: 8px; overflow: hidden; }
+.task-main { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.task-url { flex: 1; font-size: 13px; overflow: hidden; }
+.task-url-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 500; }
+.task-url-sub  { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-actions  { display: flex; gap: 6px; flex-shrink: 0; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; flex-shrink: 0;
+}
+.badge-waiting     { background: var(--border);  color: var(--muted); }
+.badge-downloading { background: var(--blue-t);  color: var(--blue); }
+.badge-done        { background: var(--accent-t); color: var(--accent); }
+.badge-error       { background: var(--red-t);    color: var(--red); }
+
+.task-log {
+  background: #0f1117; color: #c8d0e0; font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 11px; line-height: 1.6; padding: 8px 12px;
+  border-top: 1px solid #1f2330; max-height: 100px; overflow-y: auto;
+}
+[data-dark] .task-log { background: #0a0a0a; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--blue-t); border-top-color: var(--blue);
+  animation: spin .7s linear infinite; display: inline-block; flex-shrink: 0;
+}
+
+/* ── Resolver modal ───────────────────────────────────────────────────── */
+.resolver-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.resolver-modal {
+  background: var(--surface); border-radius: 12px;
+  width: 100%; max-width: 620px; max-height: 82vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 48px rgba(0,0,0,.25);
+  overflow: hidden;
+}
+.resolver-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 20px 20px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.resolver-title { font-size: 16px; font-weight: 600; }
+.resolver-sub { font-size: 11px; color: var(--muted); margin-top: 3px; max-width: 460px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resolver-loading { text-align: center; padding: 48px 20px; color: var(--muted); }
+.resolver-loading .spinner { width: 24px; height: 24px; margin: 0 auto 12px; border-width: 3px; }
+.resolver-toolbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.resolver-check-all {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 500; white-space: nowrap; user-select: none;
+}
+.resolver-check-all input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
+.resolver-search { flex: 1; max-width: 200px; padding: 6px 10px; font-size: 13px; }
+.resolver-count { font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+.resolver-list { flex: 1; overflow-y: auto; }
+.resolver-track {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 16px; cursor: pointer; transition: background .1s;
+  border-bottom: 1px solid var(--border);
+}
+.resolver-track:last-child { border-bottom: none; }
+.resolver-track:hover { background: var(--bg); }
+.resolver-track input[type=checkbox] { flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
+.resolver-track-num { width: 24px; text-align: right; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.resolver-track-info { flex: 1; min-width: 0; }
+.resolver-track-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resolver-track-meta { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+.resolver-track-dur { font-size: 11px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.resolver-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+
+/* ── Files table ──────────────────────────────────────────────────────── */
+.files-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.files-title { font-size: 15px; font-weight: 600; }
+.files-empty { text-align: center; padding: 24px 0; color: var(--muted); font-size: 13px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+td { padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+.file-name { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Footer & Toast ───────────────────────────────────────────────────── */
+footer { text-align: center; padding: 24px 0 32px; color: var(--muted); font-size: 12px; }
+#toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 16px; font-size: 13px;
+  box-shadow: var(--shadow); max-width: 320px;
+  animation: fadeIn .2s; color: var(--text);
+}
+.toast.error { border-left: 3px solid var(--red); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
+
+main { padding: 20px 0 8px; }
+@media (max-width: 500px) {
+  .task-main { flex-wrap: wrap; }
+  .task-actions { width: 100%; justify-content: flex-end; }
+  .row { flex-direction: column; }
+  .btn { justify-content: center; }
+  .resolver-toolbar { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="brand">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13"/>
+          <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+        <span class="brand-name">SpotiSave</span>
+      </div>
+      <button class="theme-btn" id="theme-btn" title="Přepnout téma">
+        <svg id="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg id="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main>
+<div class="container">
+
+  <!-- Input card -->
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" data-tab="single">Jeden link</button>
+      <button class="tab" data-tab="multi">Více linků</button>
+      <button class="tab" data-tab="file">Nahrát soubor</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-single">
+      <div class="row">
+        <input class="field" id="single-url" type="text"
+          placeholder="https://open.spotify.com/playlist/... nebo /track/... nebo /album/..." />
+        <button class="btn btn-primary" id="btn-add-single">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Přidat
+        </button>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-multi">
+      <textarea class="field" id="multi-urls" rows="4"
+        placeholder="Vlož URL, každý na nový řádek&#10;https://open.spotify.com/playlist/...&#10;https://open.spotify.com/track/..."></textarea>
+      <div style="margin-top:8px; display:flex; justify-content:flex-end;">
+        <button class="btn btn-primary" id="btn-add-multi">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Přidat do fronty
+        </button>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-file">
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".csv,.txt" />
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p><strong>Přetáhni soubor sem</strong> nebo <strong>klikni pro výběr</strong></p>
+        <p style="margin-top:4px;">Podporované formáty: .csv, .txt &nbsp;·&nbsp; Jeden link na řádek</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Queue card -->
+  <div class="card">
+    <div class="queue-header">
+      <span class="queue-title" id="queue-title">Fronta stahování</span>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost btn-sm" id="btn-clear-queue">Vymazat frontu</button>
+        <button class="btn btn-primary" id="btn-start-all">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Spustit vše
+        </button>
+      </div>
+    </div>
+    <div id="queue-list">
+      <div class="queue-empty" id="queue-empty">
+        Zatím žádné položky. Vlož Spotify URL výše.
+      </div>
+    </div>
+  </div>
+
+  <!-- Downloaded files card -->
+  <div class="card">
+    <div class="files-header">
+      <span class="files-title">Stažené soubory</span>
+      <button class="btn btn-ghost btn-sm btn-danger" id="btn-delete-all" style="display:none;">Smazat vše</button>
+    </div>
+    <div id="files-section">
+      <div class="files-empty" id="files-empty">Žádné stažené soubory.</div>
+      <table id="files-table" style="display:none;">
+        <thead><tr><th>Název</th><th>Velikost</th><th>Datum</th><th></th></tr></thead>
+        <tbody id="files-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</main>
+
+<footer>
+  <div class="container">SpotiSave využívá <a href="https://spotdl.readthedocs.io" style="color:var(--accent);">spotDL</a> engine</div>
+</footer>
+
+<!-- ── Resolver Modal ───────────────────────────────────────────────────── -->
+<div id="resolver-overlay" class="resolver-overlay" style="display:none;">
+  <div class="resolver-modal">
+    <div class="resolver-header">
+      <div style="min-width:0;">
+        <div class="resolver-title" id="resolver-title">Načítám...</div>
+        <div class="resolver-sub" id="resolver-sub"></div>
+      </div>
+      <button class="theme-btn" id="resolver-close" style="flex-shrink:0; margin-left:12px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="resolver-loading" id="resolver-loading">
+      <div class="spinner"></div>
+      <div>Načítám seznam skladeb…</div>
+      <div style="font-size:12px; margin-top:6px;">Může to trvat několik sekund</div>
+    </div>
+
+    <div id="resolver-content" style="display:none; flex:1; min-height:0; display:none; flex-direction:column; overflow:hidden;">
+      <div class="resolver-toolbar">
+        <label class="resolver-check-all">
+          <input type="checkbox" id="check-all" checked />
+          Vybrat vše
+        </label>
+        <input class="field resolver-search" id="resolver-search" placeholder="Hledat skladbu…" />
+        <span class="resolver-count" id="resolver-count"></span>
+      </div>
+      <div class="resolver-list" id="resolver-list"></div>
+    </div>
+
+    <div class="resolver-footer">
+      <button class="btn btn-ghost" id="resolver-cancel">Zrušit</button>
+      <button class="btn btn-primary" id="resolver-add" disabled>Vyberte skladby</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ── Script ───────────────────────────────────────────────────────────── -->
+<script>
+const API = 'http://localhost:3001/api';
+
+// ── State ──────────────────────────────────────────────────────────────────
+let localQueue = [];
+let sseMap     = {};
+let pollTimer  = null;
+
+// Resolver state
+let resolverTracks   = [];
+let resolverSelected = new Set();
+let resolverPending  = []; // queue of URLs to resolve
+let resolverBusy     = false;
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+const themeBtn = document.getElementById('theme-btn');
+if (localStorage.getItem('theme') === 'dark') applyDark();
+
+function applyDark() {
+  document.documentElement.setAttribute('data-dark', '');
+  document.getElementById('icon-sun').style.display  = '';
+  document.getElementById('icon-moon').style.display = 'none';
+}
+function applyLight() {
+  document.documentElement.removeAttribute('data-dark');
+  document.getElementById('icon-sun').style.display  = 'none';
+  document.getElementById('icon-moon').style.display = '';
+}
+themeBtn.addEventListener('click', () => {
+  const dark = document.documentElement.hasAttribute('data-dark');
+  dark ? applyLight() : applyDark();
+  localStorage.setItem('theme', dark ? 'light' : 'dark');
+});
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── URL helpers ────────────────────────────────────────────────────────────
+function isSpotifyUrl(url) {
+  return /^https?:\/\/(open\.)?spotify\.com\//i.test(url);
+}
+
+function urlType(url) {
+  try {
+    const p = new URL(url).pathname;
+    if (/^\/track\//i.test(p))    return 'track';
+    if (/^\/playlist\//i.test(p)) return 'playlist';
+    if (/^\/album\//i.test(p))    return 'album';
+    if (/^\/artist\//i.test(p))   return 'artist';
+  } catch {}
+  return 'track';
+}
+
+const typeLabels = { track:'Track', playlist:'Playlist', album:'Album', artist:'Interpret' };
+
+function fmtDuration(secs) {
+  if (!secs) return '';
+  const m = Math.floor(secs / 60);
+  const s = String(Math.floor(secs % 60)).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+// ── Add URLs entry point ───────────────────────────────────────────────────
+function addUrls(raw) {
+  const all = raw.split(/[\r\n,]+/).map(u => u.trim()).filter(Boolean);
+  const invalid  = all.filter(u => !isSpotifyUrl(u));
+  const valid    = all.filter(u =>  isSpotifyUrl(u));
+
+  if (invalid.length) toast(`${invalid.length} URL přeskočeno — není Spotify link.`, 'error');
+  if (!valid.length) return;
+
+  const tracks   = valid.filter(u => urlType(u) === 'track');
+  const nonTrack = valid.filter(u => urlType(u) !== 'track');
+
+  // Single tracks → add directly
+  if (tracks.length) {
+    const items = tracks.map(url => makeItem(url, null));
+    localQueue.push(...items);
+    renderQueue();
+    toast(`Přidáno ${tracks.length} skladeb do fronty.`);
+  }
+
+  // Playlists / albums / artists → resolve
+  if (nonTrack.length) {
+    resolverPending.push(...nonTrack);
+    processResolverQueue();
+  }
+}
+
+function makeItem(url, label) {
+  return { localId: crypto.randomUUID(), url, label, serverId: null, status: 'pending', filename: null, error: null, log: [] };
+}
+
+// ── Button handlers ────────────────────────────────────────────────────────
+document.getElementById('btn-add-single').addEventListener('click', () => {
+  const val = document.getElementById('single-url').value.trim();
+  if (!val) return;
+  addUrls(val);
+  document.getElementById('single-url').value = '';
+});
+document.getElementById('single-url').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-add-single').click();
+});
+
+document.getElementById('btn-add-multi').addEventListener('click', () => {
+  const val = document.getElementById('multi-urls').value;
+  if (!val.trim()) return;
+  addUrls(val);
+  document.getElementById('multi-urls').value = '';
+});
+
+document.getElementById('btn-clear-queue').addEventListener('click', () => {
+  const before = localQueue.length;
+  localQueue = localQueue.filter(t => !['pending','waiting'].includes(t.status));
+  if (localQueue.length === before) { toast('Žádné čekající položky.'); return; }
+  renderQueue();
+});
+
+document.getElementById('btn-start-all').addEventListener('click', startAll);
+
+// ── File upload ────────────────────────────────────────────────────────────
+const dropzone  = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));
+dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('over'); handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', () => { handleFiles(fileInput.files); fileInput.value = ''; });
+
+function handleFiles(files) {
+  if (!files || !files.length) return;
+  const file = files[0];
+  if (!/\.(csv|txt)$/i.test(file.name)) { toast('Pouze .csv nebo .txt soubory.', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => addUrls(e.target.result);
+  reader.readAsText(file);
+}
+
+// ── Resolver ───────────────────────────────────────────────────────────────
+function processResolverQueue() {
+  if (resolverBusy || !resolverPending.length) return;
+  resolverBusy = true;
+  const url = resolverPending.shift();
+  openResolver(url);
+}
+
+function openResolver(url) {
+  const type = urlType(url);
+  resolverTracks   = [];
+  resolverSelected = new Set();
+
+  document.getElementById('resolver-title').textContent = `Načítám ${typeLabels[type] || type}…`;
+  document.getElementById('resolver-sub').textContent   = url;
+  document.getElementById('resolver-loading').style.display  = '';
+  document.getElementById('resolver-content').style.display  = 'none';
+  document.getElementById('resolver-search').value = '';
+  document.getElementById('resolver-add').disabled = true;
+  document.getElementById('resolver-add').textContent = 'Vyberte skladby';
+  document.getElementById('resolver-overlay').style.display = 'flex';
+
+  fetch(`${API}/resolve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { toast(data.error, 'error'); closeResolver(); return; }
+
+    resolverTracks   = data.tracks;
+    resolverSelected = new Set(resolverTracks.map((_, i) => i));
+
+    const label = `${typeLabels[type] || type} · ${resolverTracks.length} skladeb`;
+    document.getElementById('resolver-title').textContent = label;
+    document.getElementById('resolver-loading').style.display  = 'none';
+    document.getElementById('resolver-content').style.display  = 'flex';
+    document.getElementById('check-all').checked = true;
+    document.getElementById('check-all').indeterminate = false;
+    renderResolverList('');
+  })
+  .catch(() => { toast('Chyba při načítání playlistu.', 'error'); closeResolver(); });
+}
+
+function renderResolverList(filter) {
+  const q = filter.toLowerCase().trim();
+  const list = document.getElementById('resolver-list');
+
+  const visible = resolverTracks
+    .map((t, i) => ({ t, i }))
+    .filter(({ t }) => !q || t.name.toLowerCase().includes(q) || t.artists.toLowerCase().includes(q));
+
+  list.innerHTML = visible.map(({ t, i }) => `
+    <label class="resolver-track">
+      <input type="checkbox" ${resolverSelected.has(i) ? 'checked' : ''}
+        onchange="toggleTrack(${i}, this.checked)" />
+      <span class="resolver-track-num">${i + 1}</span>
+      <span class="resolver-track-info">
+        <span class="resolver-track-name">${escHtml(t.name || t.url)}</span>
+        <span class="resolver-track-meta">${escHtml(t.artists)}${t.album ? ' · ' + escHtml(t.album) : ''}</span>
+      </span>
+      <span class="resolver-track-dur">${fmtDuration(t.duration)}</span>
+    </label>
+  `).join('');
+
+  document.getElementById('resolver-count').textContent =
+    q ? `${visible.length} z ${resolverTracks.length}` : '';
+
+  updateResolverBtn();
+}
+
+function toggleTrack(i, checked) {
+  if (checked) resolverSelected.add(i); else resolverSelected.delete(i);
+  const ca = document.getElementById('check-all');
+  ca.indeterminate = resolverSelected.size > 0 && resolverSelected.size < resolverTracks.length;
+  ca.checked = resolverSelected.size === resolverTracks.length;
+  updateResolverBtn();
+}
+
+function updateResolverBtn() {
+  const btn = document.getElementById('resolver-add');
+  const n   = resolverSelected.size;
+  btn.disabled    = n === 0;
+  btn.textContent = n > 0 ? `Přidat ${n} vybraných do fronty` : 'Vyberte skladby';
+}
+
+function closeResolver() {
+  document.getElementById('resolver-overlay').style.display = 'none';
+  resolverBusy = false;
+  processResolverQueue();
+}
+
+document.getElementById('check-all').addEventListener('change', function() {
+  resolverTracks.forEach((_, i) => this.checked ? resolverSelected.add(i) : resolverSelected.delete(i));
+  this.indeterminate = false;
+  renderResolverList(document.getElementById('resolver-search').value);
+});
+
+document.getElementById('resolver-search').addEventListener('input', function() {
+  renderResolverList(this.value);
+});
+
+document.getElementById('resolver-close').addEventListener('click', closeResolver);
+document.getElementById('resolver-cancel').addEventListener('click', closeResolver);
+document.getElementById('resolver-overlay').addEventListener('click', e => { if (e.target.id === 'resolver-overlay') closeResolver(); });
+
+document.getElementById('resolver-add').addEventListener('click', () => {
+  const chosen = resolverTracks.filter((_, i) => resolverSelected.has(i));
+  if (!chosen.length) return;
+  const items = chosen.map(t => makeItem(t.url, t.name ? `${t.artists} — ${t.name}` : null));
+  localQueue.push(...items);
+  renderQueue();
+  toast(`Přidáno ${items.length} skladeb do fronty.`);
+  closeResolver();
+});
+
+// ── Start queue ────────────────────────────────────────────────────────────
+async function startAll() {
+  const pending = localQueue.filter(t => t.status === 'pending');
+  if (!pending.length && localQueue.every(t => ['done','error'].includes(t.status))) {
+    toast('Fronta je prázdná nebo dokončena.'); return;
+  }
+
+  if (pending.length) {
+    try {
+      const res  = await fetch(`${API}/queue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: pending.map(t => t.url) }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.error || 'Chyba serveru', 'error'); return; }
+      pending.forEach((item, i) => { item.serverId = data.taskIds[i]; item.status = 'waiting'; });
+    } catch { toast('Nelze se připojit k serveru. Je spuštěn node server.js?', 'error'); return; }
+  }
+
+  await fetch(`${API}/start-all`, { method: 'POST' }).catch(() => {});
+  renderQueue();
+  startPolling();
+}
+
+async function startSingle(localId) {
+  const item = localQueue.find(t => t.localId === localId);
+  if (!item) return;
+
+  if (item.status === 'pending') {
+    try {
+      const res  = await fetch(`${API}/queue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: [item.url] }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.error || 'Chyba serveru', 'error'); return; }
+      item.serverId = data.taskIds[0];
+      item.status   = 'waiting';
+    } catch { toast('Nelze se připojit k serveru.', 'error'); return; }
+  }
+
+  await fetch(`${API}/start/${item.serverId}`, { method: 'POST' }).catch(() => {});
+  renderQueue();
+  startPolling();
+}
+
+// ── Polling ────────────────────────────────────────────────────────────────
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(pollStatus, 800);
+}
+function stopPolling() { clearInterval(pollTimer); pollTimer = null; }
+
+async function pollStatus() {
+  try {
+    const data = await fetch(`${API}/status`).then(r => r.json());
+    let changed = false;
+
+    data.tasks.forEach(st => {
+      const local = localQueue.find(t => t.serverId === st.id);
+      if (!local) return;
+      const prev = local.status;
+      local.status   = st.status;
+      local.filename = st.filename;
+      local.error    = st.error;
+      st.logTail?.forEach(line => { if (!local.log.includes(line)) local.log.push(line); });
+      if (local.status === 'downloading' && !sseMap[local.serverId]) connectSSE(local);
+      if (prev !== local.status) { changed = true; if (local.status === 'done') refreshFiles(); }
+    });
+
+    if (changed) renderQueue();
+    if (!localQueue.some(t => ['waiting','downloading'].includes(t.status))) stopPolling();
+  } catch {}
+}
+
+// ── SSE ────────────────────────────────────────────────────────────────────
+function connectSSE(item) {
+  if (sseMap[item.serverId]) return;
+  const es = new EventSource(`${API}/progress/${item.serverId}`);
+  sseMap[item.serverId] = es;
+  es.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'log') {
+      item.log.push(msg.line);
+      const el = document.getElementById(`log-${item.localId}`);
+      if (el) { el.textContent = item.log.slice(-8).join('\n'); el.scrollTop = el.scrollHeight; }
+    } else if (msg.type === 'status') {
+      item.status   = msg.status;
+      item.filename = msg.filename || item.filename;
+      item.error    = msg.error   || item.error;
+      es.close(); delete sseMap[item.serverId];
+      renderQueue();
+      if (item.status === 'done') refreshFiles();
+    }
+  };
+  es.onerror = () => { es.close(); delete sseMap[item.serverId]; };
+}
+
+// ── Render queue ───────────────────────────────────────────────────────────
+function renderQueue() {
+  const list  = document.getElementById('queue-list');
+  const empty = document.getElementById('queue-empty');
+  document.getElementById('queue-title').textContent = `Fronta stahování (${localQueue.length} položek)`;
+
+  if (!localQueue.length) {
+    empty.style.display = '';
+    list.querySelectorAll('.task-item').forEach(el => el.remove());
+    return;
+  }
+  empty.style.display = 'none';
+
+  localQueue.forEach(item => {
+    let el = document.getElementById(`task-${item.localId}`);
+    if (!el) { el = document.createElement('div'); el.className = 'task-item'; el.id = `task-${item.localId}`; list.appendChild(el); }
+    el.innerHTML = taskHtml(item);
+  });
+
+  list.querySelectorAll('.task-item').forEach(el => {
+    if (!localQueue.find(t => `task-${t.localId}` === el.id)) el.remove();
+  });
+}
+
+function shortUrl(url) {
+  try {
+    const parts = new URL(url).pathname.split('/').filter(Boolean);
+    return `Spotify ${typeLabels[parts[0]] || parts[0] || 'item'}`;
+  } catch { return url.slice(0, 40) + '…'; }
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(2) + ' MB';
+}
+
+function statusBadge(status) {
+  const map = {
+    pending:     ['badge-waiting',     '⏳ Připraveno'],
+    waiting:     ['badge-waiting',     '⏳ Čekání'],
+    downloading: ['badge-downloading', '<span class="spinner"></span> Stahuje se'],
+    done:        ['badge-done',        '✅ Staženo'],
+    error:       ['badge-error',       '❌ Chyba'],
+  };
+  const [cls, label] = map[status] || ['badge-waiting', status];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function taskHtml(item) {
+  const name = item.filename
+    ? item.filename.replace(/\.mp3$/, '')
+    : (item.label || shortUrl(item.url));
+  const showLog   = item.status === 'downloading' && item.log.length > 0;
+  const showError = item.status === 'error' && item.error;
+
+  const btns = [];
+  if (['pending','waiting'].includes(item.status)) {
+    btns.push(`<button class="btn btn-ghost btn-sm" onclick="startSingle('${item.localId}')">▶</button>`);
+    btns.push(`<button class="btn btn-ghost btn-sm" onclick="removeItem('${item.localId}')">✕</button>`);
+  }
+  if (item.status === 'done' && item.filename) {
+    btns.push(`<a class="btn btn-primary btn-sm" href="/downloads/${encodeURIComponent(item.filename)}" download>⬇ Stáhnout</a>`);
+  }
+
+  return `
+    <div class="task-main">
+      <div class="task-url">
+        <div class="task-url-text">${escHtml(name)}</div>
+        <div class="task-url-sub">${escHtml(item.url)}</div>
+      </div>
+      ${statusBadge(item.status)}
+      <div class="task-actions">${btns.join('')}</div>
+    </div>
+    ${showLog   ? `<div class="task-log" id="log-${item.localId}">${escHtml(item.log.slice(-8).join('\n'))}</div>` : ''}
+    ${showError ? `<div style="padding:8px 12px;font-size:12px;color:var(--red);border-top:1px solid var(--border);">⚠ ${escHtml(item.error)}</div>` : ''}
+  `;
+}
+
+function removeItem(localId) {
+  localQueue = localQueue.filter(t => t.localId !== localId);
+  renderQueue();
+}
+
+// ── Downloaded files ───────────────────────────────────────────────────────
+async function refreshFiles() {
+  try {
+    const data = await fetch(`${API}/files`).then(r => r.json());
+    renderFiles(data.files);
+  } catch {}
+}
+
+function renderFiles(files) {
+  const empty  = document.getElementById('files-empty');
+  const table  = document.getElementById('files-table');
+  const tbody  = document.getElementById('files-body');
+  const delBtn = document.getElementById('btn-delete-all');
+
+  if (!files?.length) {
+    empty.style.display = ''; table.style.display = 'none'; delBtn.style.display = 'none'; return;
+  }
+  empty.style.display = 'none'; table.style.display = ''; delBtn.style.display = '';
+
+  tbody.innerHTML = files.map(f => `
+    <tr>
+      <td class="file-name" title="${escHtml(f.name)}">${escHtml(f.name.replace(/\.mp3$/, ''))}</td>
+      <td>${formatBytes(f.size)}</td>
+      <td>${new Date(f.date).toLocaleDateString('cs-CZ', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+      <td><a class="btn btn-primary btn-sm" href="/downloads/${encodeURIComponent(f.name)}" download>⬇ Stáhnout</a></td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('btn-delete-all').addEventListener('click', async () => {
+  if (!confirm('Smazat všechny stažené soubory?')) return;
+  await fetch(`${API}/files`, { method: 'DELETE' });
+  refreshFiles();
+});
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = 'toast' + (type === 'error' ? ' error' : '');
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+refreshFiles();
+renderQueue();
+</script>
+</body>
+</html>
