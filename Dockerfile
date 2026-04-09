@@ -16,8 +16,8 @@ COPY . .
 
 RUN mkdir -p downloads
 
-ENV YTDLP_PATH=yt-dlp
-ENV FFMPEG_PATH=ffmpeg
+ENV YTDLP_PATH=/usr/local/bin/yt-dlp
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
 
 EXPOSE 3001
 CMD ["node", "server.js"]
