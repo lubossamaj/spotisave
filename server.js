@@ -47,15 +47,15 @@ function logTask(id, line) {
 }
 
 // ── Spotify metadata scraper (no API key needed) ───────────────────────────
-function fetchHtml(url) {
+function fetchUrl(url, acceptJson) {
   return new Promise((resolve, reject) => {
-    const clean = url.split("?")[0]; // strip ?si=... tracking params
+    const clean = url.split("?")[0];
     const opts = {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
-        Accept: "text/html",
+        Accept: acceptJson ? "application/json" : "text/html",
       },
     };
     const req = https.get(clean, opts, (res) => {
@@ -63,7 +63,9 @@ function fetchHtml(url) {
         [301, 302, 303, 307, 308].includes(res.statusCode) &&
         res.headers.location
       ) {
-        return fetchHtml(res.headers.location).then(resolve).catch(reject);
+        return fetchUrl(res.headers.location, acceptJson)
+          .then(resolve)
+          .catch(reject);
       }
       let data = "";
       res.on("data", (c) => {
@@ -71,16 +73,15 @@ function fetchHtml(url) {
       });
       res.on("end", () => resolve(data));
     });
-    req.setTimeout(12000, () => {
+    req.setTimeout(20000, () => {
       req.destroy();
-      reject(new Error("Timeout při načítání Spotify stránky"));
+      reject(new Error("Timeout"));
     });
     req.on("error", reject);
   });
 }
 
 async function getSpotifyMeta(url) {
-  // Extract type + ID from URL (strip tracking params)
   const clean = url.split("?")[0];
   const m = clean.match(
     /spotify\.com\/(track|album|playlist|artist)\/([A-Za-z0-9]+)/i,
@@ -88,10 +89,30 @@ async function getSpotifyMeta(url) {
   if (!m) throw new Error("Neplatný Spotify URL");
   const [, type, id] = m;
 
-  // Spotify's embed page is server-side rendered — has real JSON with track data
-  const html = await fetchHtml(`https://open.spotify.com/embed/${type}/${id}`);
+  // 1. Try oEmbed — simple JSON, less likely to be blocked
+  try {
+    const oembed = await fetchUrl(
+      `https://open.spotify.com/oembed?url=https://open.spotify.com/${type}/${id}`,
+      true,
+    );
+    const j = JSON.parse(oembed);
+    // oEmbed title: "Track Name" + author_name: "Artist Name"
+    if (j.title) {
+      return {
+        title: decodeHtmlEntities(j.title),
+        artist: decodeHtmlEntities(j.author_name ?? ""),
+      };
+    }
+  } catch (_) {
+    /* fall through */
+  }
 
-  // Pattern: "name":"Track Title" ... "artists":[{"name":"Artist Name"
+  // 2. Fallback — embed page scraping
+  const html = await fetchUrl(
+    `https://open.spotify.com/embed/${type}/${id}`,
+    false,
+  );
+
   const full = html.match(
     /"name":"([^"]+)"[^[\]{}]*?"artists"\s*:\s*\[\s*\{[^}]*?"name"\s*:\s*"([^"]+)"/s,
   );
@@ -101,11 +122,10 @@ async function getSpotifyMeta(url) {
       artist: decodeHtmlEntities(full[2]),
     };
 
-  // Fallback: just the name field
   const nameOnly = html.match(/"name"\s*:\s*"([^"]+)"/);
   if (nameOnly) return { title: decodeHtmlEntities(nameOnly[1]), artist: "" };
 
-  throw new Error("Nepodařilo se načíst metadata ze Spotify embed stránky");
+  throw new Error("Nepodařilo se načíst metadata ze Spotify");
 }
 
 function decodeHtmlEntities(s) {
@@ -261,8 +281,9 @@ app.post("/api/resolve", async (req, res) => {
   const [, type, id] = m;
 
   try {
-    const html = await fetchHtml(
+    const html = await fetchUrl(
       `https://open.spotify.com/embed/${type}/${id}`,
+      false,
     );
 
     // Parse __NEXT_DATA__ JSON embedded in the page
