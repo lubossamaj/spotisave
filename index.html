@@ -229,6 +229,7 @@ textarea.field { resize: vertical; min-height: 90px; }
 /* ── Files table ──────────────────────────────────────────────────────── */
 .files-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .files-title { font-size: 15px; font-weight: 600; }
+.files-actions { display: flex; gap: 8px; align-items: center; }
 .files-empty { text-align: center; padding: 24px 0; color: var(--muted); font-size: 13px; }
 table { width: 100%; border-collapse: collapse; }
 th { text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
@@ -356,7 +357,10 @@ main { padding: 20px 0 8px; }
   <div class="card">
     <div class="files-header">
       <span class="files-title">Stažené soubory</span>
-      <button class="btn btn-ghost btn-sm btn-danger" id="btn-delete-all" style="display:none;">Smazat vše</button>
+      <div class="files-actions">
+        <button class="btn btn-primary btn-sm" id="btn-download-all" style="display:none;">⬇ Stáhnout vše</button>
+        <button class="btn btn-ghost btn-sm btn-danger" id="btn-delete-all" style="display:none;">Smazat vše</button>
+      </div>
     </div>
     <div id="files-section">
       <div class="files-empty" id="files-empty">Žádné stažené soubory.</div>
@@ -839,7 +843,7 @@ function taskHtml(item) {
     btns.push(`<button class="btn btn-ghost btn-sm" onclick="removeItem('${item.localId}')">✕</button>`);
   }
   if (item.status === 'done' && item.filename) {
-    btns.push(`<a class="btn btn-primary btn-sm" href="/downloads/${encodeURIComponent(item.filename)}" download>⬇ Stáhnout</a>`);
+    btns.push(`<button class="btn btn-primary btn-sm" onclick="saveFile('${escHtml(item.filename)}')">⬇ Stáhnout</button>`);
   }
 
   return `
@@ -873,28 +877,62 @@ function renderFiles(files) {
   const empty  = document.getElementById('files-empty');
   const table  = document.getElementById('files-table');
   const tbody  = document.getElementById('files-body');
-  const delBtn = document.getElementById('btn-delete-all');
+  const delBtn  = document.getElementById('btn-delete-all');
+  const dlAll   = document.getElementById('btn-download-all');
 
   if (!files?.length) {
-    empty.style.display = ''; table.style.display = 'none'; delBtn.style.display = 'none'; return;
+    empty.style.display = ''; table.style.display = 'none'; delBtn.style.display = 'none'; dlAll.style.display = 'none'; return;
   }
-  empty.style.display = 'none'; table.style.display = ''; delBtn.style.display = '';
+  empty.style.display = 'none'; table.style.display = ''; delBtn.style.display = ''; dlAll.style.display = '';
 
   tbody.innerHTML = files.map(f => `
     <tr>
       <td class="file-name" title="${escHtml(f.name)}">${escHtml(f.name.replace(/\.mp3$/, ''))}</td>
       <td>${formatBytes(f.size)}</td>
       <td>${new Date(f.date).toLocaleDateString('cs-CZ', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
-      <td><a class="btn btn-primary btn-sm" href="/downloads/${encodeURIComponent(f.name)}" download>⬇ Stáhnout</a></td>
+      <td><button class="btn btn-primary btn-sm" onclick="saveFile('${escHtml(f.name)}')">⬇ Stáhnout</button></td>
     </tr>
   `).join('');
 }
+
+document.getElementById('btn-download-all').addEventListener('click', async () => {
+  const resp = await fetch(`${API}/files`);
+  const { files } = await resp.json();
+  if (!files?.length) return;
+  for (const f of files) {
+    await saveFile(f.name);
+  }
+});
 
 document.getElementById('btn-delete-all').addEventListener('click', async () => {
   if (!confirm('Smazat všechny stažené soubory?')) return;
   await fetch(`${API}/files`, { method: 'DELETE' });
   refreshFiles();
 });
+
+// ── Save As ───────────────────────────────────────────────────────────────
+async function saveFile(filename) {
+  const url = `${API}/downloads/${encodeURIComponent(filename)}`;
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'MP3 Audio', accept: { 'audio/mpeg': ['.mp3'] } }],
+      });
+      const resp = await fetch(url);
+      const writable = await handle.createWritable();
+      await resp.body.pipeTo(writable);
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user cancelled
+    }
+  }
+  // fallback — direct download
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+}
 
 // ── Utils ──────────────────────────────────────────────────────────────────
 function escHtml(s) {
