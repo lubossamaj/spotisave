@@ -912,7 +912,7 @@ document.getElementById('btn-delete-all').addEventListener('click', async () => 
 
 // ── Save As ───────────────────────────────────────────────────────────────
 async function saveFile(filename) {
-  const url = `${API}/downloads/${encodeURIComponent(filename)}`;
+  const url = `${API.replace(/\/api$/, '')}/downloads/${encodeURIComponent(filename)}`;
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({
