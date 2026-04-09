@@ -19,6 +19,12 @@ const FFMPEG = process.env.FFMPEG_PATH || `${process.env.HOME}/.spotdl/ffmpeg`;
 
 if (!fs.existsSync(DOWNLOADS)) fs.mkdirSync(DOWNLOADS, { recursive: true });
 
+// Startup diagnostics
+console.log(`  yt-dlp path : ${YTDLP}`);
+console.log(`  ffmpeg path : ${FFMPEG}`);
+console.log(`  yt-dlp exists: ${fs.existsSync(YTDLP)}`);
+console.log(`  ffmpeg exists: ${fs.existsSync(FFMPEG)}`);
+
 app.use(cors());
 app.use(express.json());
 app.use("/downloads", express.static(DOWNLOADS));
