@@ -5,7 +5,7 @@ ARG CACHEBUST=20260410
 
 # Install ffmpeg + curl
 RUN apt-get update && apt-get install -y \
-    ffmpeg curl \
+    ffmpeg curl ca-certificates \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
