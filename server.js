@@ -19,6 +19,15 @@ const FFMPEG = process.env.FFMPEG_PATH || `${process.env.HOME}/.spotdl/ffmpeg`;
 
 if (!fs.existsSync(DOWNLOADS)) fs.mkdirSync(DOWNLOADS, { recursive: true });
 
+// Write YouTube cookies from env var to temp file (avoids IP rate limits on cloud servers)
+const COOKIES_FILE = "/tmp/yt-cookies.txt";
+if (process.env.YOUTUBE_COOKIES) {
+  fs.writeFileSync(COOKIES_FILE, process.env.YOUTUBE_COOKIES, "utf8");
+  console.log("  cookies: written to /tmp/yt-cookies.txt");
+} else {
+  console.log("  cookies: YOUTUBE_COOKIES not set (anonymous mode)");
+}
+
 // Startup diagnostics
 console.log(`  yt-dlp path : ${YTDLP}`);
 console.log(`  ffmpeg path : ${FFMPEG}`);
@@ -226,6 +235,7 @@ async function processQueue() {
     "--no-playlist",
     "--no-warnings",
     "--newline",
+    ...(fs.existsSync(COOKIES_FILE) ? ["--cookies", COOKIES_FILE] : []),
   ];
 
   const proc = spawn(YTDLP, args, { cwd: DOWNLOADS });
