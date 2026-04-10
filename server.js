@@ -25,6 +25,20 @@ console.log(`  ffmpeg path : ${FFMPEG}`);
 console.log(`  yt-dlp exists: ${fs.existsSync(YTDLP)}`);
 console.log(`  ffmpeg exists: ${fs.existsSync(FFMPEG)}`);
 
+// Test yt-dlp binary at startup
+const { spawnSync } = require("child_process");
+const test = spawnSync(YTDLP, ["--version"], { timeout: 10000 });
+if (test.error) {
+  console.error(`  yt-dlp ERROR: ${test.error.message}`);
+} else {
+  console.log(
+    `  yt-dlp version: ${(test.stdout || "").toString().trim() || "(no output)"}`,
+  );
+  if (test.stderr?.length)
+    console.log(`  yt-dlp stderr: ${test.stderr.toString().trim()}`);
+  console.log(`  yt-dlp exit code: ${test.status}`);
+}
+
 app.use(cors());
 app.use(express.json());
 app.use("/downloads", express.static(DOWNLOADS));
