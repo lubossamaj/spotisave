@@ -1,5 +1,8 @@
 FROM node:20-slim
 
+# Cache bust: 2026-04-10
+ARG CACHEBUST=20260410
+
 # Install ffmpeg + curl
 RUN apt-get update && apt-get install -y \
     ffmpeg curl \
