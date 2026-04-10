@@ -20,9 +20,13 @@ const FFMPEG = process.env.FFMPEG_PATH || `${process.env.HOME}/.spotdl/ffmpeg`;
 if (!fs.existsSync(DOWNLOADS)) fs.mkdirSync(DOWNLOADS, { recursive: true });
 
 // Write YouTube cookies from env var to temp file (avoids IP rate limits on cloud servers)
+// Env var is base64-encoded to preserve tabs and newlines
 const COOKIES_FILE = "/tmp/yt-cookies.txt";
 if (process.env.YOUTUBE_COOKIES) {
-  fs.writeFileSync(COOKIES_FILE, process.env.YOUTUBE_COOKIES, "utf8");
+  const decoded = Buffer.from(process.env.YOUTUBE_COOKIES, "base64").toString(
+    "utf8",
+  );
+  fs.writeFileSync(COOKIES_FILE, decoded, "utf8");
   console.log("  cookies: written to /tmp/yt-cookies.txt");
 } else {
   console.log("  cookies: YOUTUBE_COOKIES not set (anonymous mode)");
